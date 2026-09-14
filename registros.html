@@ -18,7 +18,7 @@
 <label>Líder / base<select id="leader" name="record_id" required></select></label>
 <label>Base adicionada no dia<input name="base_added" type="number" min="0" max="2147483647" step="1" value="0" required></label>
 <label>Confirmados<input name="confirmed" type="number" min="0" max="2147483647" step="1" value="0" required></label><label>Não confirmados<input name="not_confirmed" type="number" min="0" max="2147483647" step="1" value="0" required></label><label>Não conhece<input name="does_not_know" type="number" min="0" max="2147483647" step="1" value="0" required></label><label>Caixa postal<input name="mailbox" type="number" min="0" max="2147483647" step="1" value="0" required></label>
-</div><p class="subtitle">Contatados no dia = soma dos quatro resultados. Informe somente pessoas novas na amostra, sem repetir contatos de outros dias.</p>
+</div><p class="subtitle">Contatados no dia = Confirmados + Não confirmados + Não conhece. Caixa postal fica separada e não entra nas porcentagens de contato ou confirmação.</p>
 <label class="notes-label">Observações (opcional)<textarea name="notes" rows="3" maxlength="1500"></textarea></label>
 <p id="form-error" class="form-error" role="alert"></p><div class="export-buttons"><button id="save" class="primary">Salvar lançamento</button><button id="cancel-edit" type="button" class="secondary" hidden>Cancelar edição</button></div></form>
 <aside class="panel projected"><h2>Como ficará o acumulado</h2><p id="base-note" class="report-preview"></p><div id="projection"></div><p class="subtitle">A base informada em cada lançamento é somada à dos dias anteriores. Informe zero quando não houver novas pessoas na base. Os lançamentos ficam separados por data.</p></aside></div>

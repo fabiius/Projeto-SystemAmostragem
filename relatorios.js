@@ -45,7 +45,7 @@ function build(){
  if(opt.details)table('Lançamentos detalhados',['Data','Coordenador','Líder',...(opt.base?['Base adicionada']:[]),...(opt.contacted?['Contatados']:[]),...(opt.confirmed?['Confirmados']:[])],r.rows.map(d=>[M.dateLabel(d.record_date),d.coordinator,d.leader,...(opt.base?[d.base_added]:[]),...(opt.contacted?[M.contacted(d)]:[]),...(opt.confirmed?[d.confirmed]:[])]));
  if(opt.notes&&$('#notes').value.trim())text('Observações para a equipe',$('#notes').value.trim());
  if(!sections.length)text('Sem seções selecionadas','Selecione as informações que deseja incluir no relatório.');
- const rule='Produção filtrada pela data do lançamento. A base adicionada em cada data soma-se ao histórico. A base anterior à atualização foi preservada no primeiro lançamento. Pendentes e cobertura consideram todo o histórico até a data final. Confirmação = confirmados / contatados no período. Rankings por confirmados, com desempate por contatados e nome.';
+ const rule='Produção filtrada pela data do lançamento. A base adicionada em cada data soma-se ao histórico. A base anterior à atualização foi preservada no primeiro lançamento. Pendentes e cobertura consideram todo o histórico até a data final. Caixa postal não entra em Contatados, Cobertura ou Taxa de confirmação. Confirmação = confirmados / contatados no período. Rankings por confirmados, com desempate por contatados e nome.';
  return {...r,sections,charts,generated:new Date(),rule};
 }
 function render(){
