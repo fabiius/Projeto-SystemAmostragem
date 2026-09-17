@@ -7,20 +7,20 @@
   function kpis(total) {
     document.querySelector('#kpis').innerHTML = [
       kpi('Base total', M.integer(total.total_base), 'Pessoas na amostra', 'database'),
-      kpi('Contatados', M.integer(total.contacted), `${M.percent(total.coverage)} da base`, 'send', '', total.coverage),
+      kpi('Ligações atendidas', M.integer(total.contacted), `${M.percent(total.coverage)} da base`, 'send', '', total.coverage),
       kpi('Cobertura da amostra', M.percent(total.coverage), `${M.integer(total.contacted)} de ${M.integer(total.total_base)} pessoas`, 'users'),
       kpi('Confirmados', M.integer(total.confirmed), `${M.percent(M.calculatePercentage(total.confirmed, total.total_base))} da base`, 'circle-check', 'green'),
-      kpi('Taxa de confirmação', M.percent(total.confirmation), `${M.integer(total.confirmed)} de ${M.integer(total.contacted)} contatados`, 'chart-column', '', total.confirmation),
+      kpi('Taxa de confirmação', M.percent(total.confirmation), `${M.integer(total.confirmed)} de ${M.integer(total.contacted)} ligações atendidas`, 'chart-column', '', total.confirmation),
       kpi('Pendentes', M.integer(total.pending), `${M.percent(M.calculatePercentage(total.pending, total.total_base))} da base`, 'clock', 'amber')
     ].join('');
   }
   function funnel(total) {
-    document.querySelector('#funnel').innerHTML = [[total.total_base, 'Base total'], [total.contacted, 'Contatados'], [total.confirmed, 'Confirmados']].map(([value, label]) => `<div class="funnel-step"><strong>${M.integer(value)}</strong><span>${label}</span><small>${M.percent(M.calculatePercentage(value, total.total_base))} da base</small></div>`).join('');
+    document.querySelector('#funnel').innerHTML = [[total.total_base, 'Cadastrados no Sistema'], [total.contacted, 'Ligações atendidas'], [total.confirmed, 'Confirmados']].map(([value, label]) => `<div class="funnel-step"><strong>${M.integer(value)}</strong><span>${label}</span><small>${M.percent(M.calculatePercentage(value, total.total_base))} da base</small></div>`).join('');
   }
   function matrix(rows, total, admin) {
     document.querySelector('#record-count').textContent = `${rows.length} registro(s)`;
-    const cells = value => `<td>${M.integer(value.total_base)}</td><td>${M.integer(value.contacted)}</td><td>${M.integer(value.confirmed)}</td><td>${M.integer(value.not_confirmed)}</td><td>${M.integer(value.does_not_know)}</td><td>${M.integer(value.mailbox)}</td><td class="coverage">${M.percent(value.coverage)}</td><td class="confirmation">${M.percent(value.confirmation)}</td>`;
-    document.querySelector('#rows').innerHTML = rows.map(row => `<tr${M.validate(row) ? ' class="row-invalid"' : ''}><td>${esc(row.coordinator || 'Sem coordenador')}</td><td>${esc(row.leader || 'Sem líder')}</td>${cells(M.summarize([row]))}<td><details class="actions"><summary aria-label="Ações para ${esc(row.leader || 'registro')}">⋯</summary><div class="action-menu"><button data-action="details" data-id="${esc(row.id)}">Visualizar detalhes</button><button data-action="edit" data-id="${esc(row.id)}">Editar</button>${admin ? `<button class="danger" data-action="delete" data-id="${esc(row.id)}">Excluir</button>` : ''}</div></details></td></tr>`).join('') || '<tr><td colspan="11" class="empty">Nenhum registro encontrado. Ajuste os filtros ou adicione um registro.</td></tr>';
+    const cells = value => `<td>${M.integer(value.total_base)}</td><td>${M.integer(value.contacted)}</td><td>${M.integer(value.confirmed)}</td><td>${M.integer(value.not_confirmed)}</td><td>${M.integer(value.does_not_know)}</td><td>${M.integer(value.mailbox)}</td><td>${M.integer(value.number_not_exists)}</td><td>${M.integer(value.not_voting)}</td><td class="coverage">${M.percent(value.coverage)}</td><td class="confirmation">${M.percent(value.confirmation)}</td>`;
+    document.querySelector('#rows').innerHTML = rows.map(row => `<tr${M.validate(row) ? ' class="row-invalid"' : ''}><td>${esc(row.coordinator || 'Sem coordenador')}</td><td>${esc(row.leader || 'Sem líder')}</td>${cells(M.summarize([row]))}<td><details class="actions"><summary aria-label="Ações para ${esc(row.leader || 'registro')}">⋯</summary><div class="action-menu"><button data-action="details" data-id="${esc(row.id)}">Visualizar detalhes</button><button data-action="edit" data-id="${esc(row.id)}">Editar</button>${admin ? `<button class="danger" data-action="delete" data-id="${esc(row.id)}">Excluir</button>` : ''}</div></details></td></tr>`).join('') || '<tr><td colspan="13" class="empty">Nenhum registro encontrado. Ajuste os filtros ou adicione um registro.</td></tr>';
     document.querySelector('#totals').innerHTML = `<tr><td colspan="2">Consolidado</td>${cells(total)}<td>—</td></tr>`;
   }
   function performance(groups, selected) {
@@ -34,10 +34,10 @@
     document.querySelector('#ranking').innerHTML = leaders.map((leader, index) => `<div class="rank-item"><span class="rank-number">${index + 1}º</span><span class="rank-avatar" aria-hidden="true">${esc((leader.leader || '?').slice(0, 1).toUpperCase())}</span><div><div class="rank-name"><span>${esc(leader.leader || 'Sem líder')}</span><strong>${M.percent(leader.confirmation)}</strong></div><small>${esc(leader.coordinator || 'Sem coordenador')}</small>${progress(leader.confirmation)}</div></div>`).join('') || '<p class="empty">Nenhum líder neste período.</p>';
   }
   let confirmationChart, statusChart;
-  const colors = ['#2ab17d', '#e4545e', '#f5be36', '#8754db', '#9ca8b9'];
+  const colors = ['#2ab17d', '#e4545e', '#f5be36', '#8754db', '#ee6b4d', '#4b72c2', '#9ca8b9'];
   function charts(leaders, total, invalid) {
-    const labels = ['Confirmados', 'Não confirmados', 'Não conhece', 'Cx. postal', 'Pendentes'];
-    const values = [total.confirmed, total.not_confirmed, total.does_not_know, total.mailbox, total.pending];
+    const labels = ['Confirmados', 'Não confirmados', 'Não conhece', 'Cx. postal', 'Número Não Existe', 'Não vai votar', 'Pendentes'];
+    const values = [total.confirmed, total.not_confirmed, total.does_not_know, total.mailbox, total.number_not_exists, total.not_voting, total.pending];
     document.querySelector('#status-total').textContent = `Total da amostra: ${M.integer(total.total_base)} pessoas`;
     document.querySelector('#status-legend').innerHTML = labels.map((label, index) => `<div class="legend-line"><span class="dot" style="background:${colors[index]}" aria-hidden="true"></span><span>${label}</span><strong>${M.integer(values[index])}</strong><em>${M.percent(M.calculatePercentage(values[index], total.total_base))}</em></div>`).join('');
     if (!window.Chart) return false;

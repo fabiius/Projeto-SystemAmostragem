@@ -1,15 +1,15 @@
 (function(root){
 'use strict';
-const fields=['confirmed','not_confirmed','does_not_know','mailbox'];
+const fields=['confirmed','not_confirmed','does_not_know','mailbox','number_not_exists','not_voting'];
 const entryFields=['base_added',...fields];
 const sumBase=rows=>rows.reduce((n,r)=>n+num(r.base_added),0);
 const num=v=>Number(v)||0;
 const contacted=r=>['confirmed','not_confirmed','does_not_know'].reduce((n,k)=>n+num(r[k]),0);
-const processed=r=>contacted(r)+num(r.mailbox);
+const processed=r=>contacted(r)+num(r.mailbox)+num(r.number_not_exists)+num(r.not_voting);
 const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
 const dateLabel=d=>d?d.split('-').reverse().join('/'):'Sem limite';
 function validDate(s){return /^\d{4}-\d{2}-\d{2}$/.test(s||'')&&new Date(s+'T12:00:00Z').toISOString().slice(0,10)===s;}
-function stats(base,rows){const t={total_base:base,...Object.fromEntries(fields.map(k=>[k,rows.reduce((n,r)=>n+num(r[k]),0)]))};t.contacted=contacted(t);t.pending=base-t.contacted;t.coverage=base?t.contacted/base*100:0;t.confirmation=t.contacted?t.confirmed/t.contacted*100:0;return t;}
+function stats(base,rows){const t={total_base:base,...Object.fromEntries(fields.map(k=>[k,rows.reduce((n,r)=>n+num(r[k]),0)]))};t.contacted=contacted(t);t.processed=processed(t);t.pending=base-t.contacted;t.difference=base-t.processed;t.coverage=base?t.contacted/base*100:0;t.confirmation=t.contacted?t.confirmed/t.contacted*100:0;return t;}
 function report(bases,entries,options={}){
  const {from='',to='',coordinator='',recordId=''}=options;
  if(from&&!validDate(from)||to&&!validDate(to))throw new Error('Informe datas válidas.');
@@ -34,8 +34,8 @@ function validateEntry(value,base,entries,editingId){
  if(!validDate(value.record_date)||value.record_date>today())return 'Informe uma data válida, até hoje.';
  for(const k of entryFields)if(!Number.isSafeInteger(Number(value[k]))||Number(value[k])<0||Number(value[k])>2147483647)return 'Use números inteiros não negativos.';
  const previous=entries.filter(e=>String(e.record_id)===String(base.id)&&String(e.id)!==String(editingId));
- const days=new Map();for(const e of [...previous,value])days.set(e.record_date,(days.get(e.record_date)||0)+num(e.base_added)-processed(e));
- let balance=0;for(const [,delta] of [...days].sort(([a],[b])=>a.localeCompare(b))){balance+=delta;if(balance<0)return 'Os contatos ultrapassam a base acumulada em uma das datas.';}
+ const days=new Map();for(const e of [...previous,value]){const day=days.get(e.record_date)||{base:0,processed:0};day.base+=num(e.base_added);day.processed+=processed(e);days.set(e.record_date,day);}
+ for(const [date,day] of days)if(day.processed>day.base)return `A soma dos resultados de ${dateLabel(date)} (${day.processed}) não pode passar da base cadastrada no dia (${day.base}).`;
  if(sumBase([...previous,value])>2147483647)return 'A base acumulada ultrapassa o limite suportado.';
  return '';
 }

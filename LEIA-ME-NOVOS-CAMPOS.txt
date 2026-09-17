@@ -1,0 +1,29 @@
+ATUALIZAÇÃO — NOVOS RESULTADOS E CONFERÊNCIA DIÁRIA
+
+Este pacote é para a versão V3 (base diária) já instalada.
+
+1. No Supabase, abra SQL Editor > New query.
+2. Cole todo o conteúdo de BASE-DIARIA-V3.sql e clique em Run.
+3. Substitua no projeto os arquivos deste pacote pelos arquivos de mesmo nome.
+4. Publique no Vercel e atualize o navegador com Ctrl+F5.
+
+O SQL é idempotente: pode ser executado novamente sem duplicar o histórico. Ele cria os campos number_not_exists e not_voting, preserva os dados existentes com zero nesses campos e passa a conferir cada lançamento por data.
+
+CONFERÊNCIA DIÁRIA
+Para cada coordenador e líder, a soma abaixo precisa ser igual ou menor que a base cadastrada no mesmo dia:
+
+Confirmados + Não confirmados + Não conhece + Caixa postal + Número Não Existe + Não vai votar
+
+Se ultrapassar, o lançamento é bloqueado e informa a data. A diferença do dia aparece no histórico e nos relatórios.
+
+LIGAÇÕES ATENDIDAS E PERCENTUAIS
+Ligações atendidas = Confirmados + Não confirmados + Não conhece.
+Caixa postal, Número Não Existe e Não vai votar continuam armazenados e aparecem separados, mas ficam fora de Ligações atendidas, Cobertura e Taxa de confirmação.
+
+RELATÓRIOS
+“Base acumulada” foi renomeada para “Cadastrados no Sistema”. Rankings, tabelas por data e exportações mostram todos os campos, inclusive os três resultados que ficam fora das porcentagens.
+
+EDIÇÃO
+Em Registros diários, selecione o líder, localize a data no histórico e clique em Editar. É possível corrigir data, base adicionada, todos os resultados e observações. O sistema recalcula a diferença e os acumulados.
+
+Arquivos incluídos: analytics-metrics.js, daily-model.js, analytics-service.js, analytics.js, analytics-components.js, analytics-exports.js, index.html, registros.html, registros.js, relatorios.html, relatorios.js, report-excel.js e BASE-DIARIA-V3.sql.

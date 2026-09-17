@@ -2,7 +2,7 @@
   'use strict';
   const M = window.SamplingMetrics, C = window.SamplingComponents, service = window.SamplingService;
   const $ = selector => document.querySelector(selector);
-  const labels = { coordinator:'Coordenador', leader:'Líder', total_base:'Total da base', confirmed:'Confirmados', not_confirmed:'Não confirmados', does_not_know:'Não conhece', mailbox:'Caixa postal' };
+  const labels = { coordinator:'Coordenador', leader:'Líder', total_base:'Total da base', confirmed:'Confirmados', not_confirmed:'Não confirmados', does_not_know:'Não conhece', mailbox:'Caixa postal', number_not_exists:'Número Não Existe', not_voting:'Não vai votar' };
   let records = [], visible = [], admin = false, ready = false, editingId = null, performanceCoordinator = '', busy = false;
   function message(text, kind = '') { $('#message').textContent = text; $('#message').className = `notice ${kind}`; $('#message').hidden = !text; }
   function icons() { window.lucide?.createIcons(); }
@@ -46,7 +46,7 @@
   function details(record) {
     const total = M.summarize([record]);
     const formattedDate = value => { const date = new Date(value); return !value || Number.isNaN(date.getTime()) ? 'Não informada' : date.toLocaleString('pt-BR'); };
-    const entries = { ...Object.fromEntries(Object.entries(labels).map(([field, label]) => [label, record[field]])), 'Contatados':total.contacted, 'Cobertura':M.percent(total.coverage), 'Taxa de confirmação':M.percent(total.confirmation), 'Pendentes':total.pending, 'Criado em':formattedDate(record.created_at), 'Atualizado em':formattedDate(record.updated_at) };
+    const entries = { ...Object.fromEntries(Object.entries(labels).map(([field, label]) => [label, record[field]])), 'Ligações atendidas':total.contacted, 'Cobertura':M.percent(total.coverage), 'Taxa de confirmação':M.percent(total.confirmation), 'Pendentes':total.pending, 'Diferença dos resultados':total.difference, 'Criado em':formattedDate(record.created_at), 'Atualizado em':formattedDate(record.updated_at) };
     $('#details-content').innerHTML = Object.entries(entries).map(([label,value]) => `<dt>${C.esc(label)}</dt><dd>${C.esc(value)}</dd>`).join('');
     $('#details-dialog').showModal();
   }

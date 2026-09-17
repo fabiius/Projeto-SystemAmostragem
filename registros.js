@@ -11,13 +11,13 @@ function projection(){
  const list=daily.filter(d=>String(d.record_id)===String(b.id)),before=M.stats(Number(b.total_base),list);
  const updated=[...list.filter(d=>String(d.id)!==String(editing)),payload()];
  const after=M.stats(M.sumBase(updated),updated);
- $('#base-note').textContent='Base: '+A.integer(b.total_base)+' pessoas • '+A.integer(before.pending)+' ainda por contatar';
- $('#projection').innerHTML=[['Base acumulada',before.total_base,after.total_base],['Contatados',before.contacted,after.contacted],['Confirmados',before.confirmed,after.confirmed],['Pendentes',before.pending,after.pending],['Cobertura',A.percent(before.coverage),A.percent(after.coverage)],['Taxa de confirmação',A.percent(before.confirmation),A.percent(after.confirmation)]].map(([label,a,b])=>'<div class="projection-row"><span>'+label+'</span><b>'+a+'</b><span>→</span><strong>'+b+'</strong></div>').join('');
+ $('#base-note').textContent='Base cadastrada: '+A.integer(b.total_base)+' pessoas • '+A.integer(before.pending)+' ainda por ligar';
+ $('#projection').innerHTML=[['Cadastrados no Sistema',before.total_base,after.total_base],['Ligações atendidas',before.contacted,after.contacted],['Confirmados',before.confirmed,after.confirmed],['Pendentes',before.pending,after.pending],['Diferença dos resultados',before.difference,after.difference],['Cobertura',A.percent(before.coverage),A.percent(after.coverage)],['Taxa de confirmação',A.percent(before.confirmation),A.percent(after.confirmation)]].map(([label,a,b])=>'<div class="projection-row"><span>'+label+'</span><b>'+a+'</b><span>→</span><strong>'+b+'</strong></div>').join('');
 }
 function history(){
  const rows=daily.filter(d=>String(d.record_id)===$('#leader').value).sort((a,b)=>a.record_date.localeCompare(b.record_date)||a.id-b.id);
- let sum=0,baseSum=0;const withTotal=rows.map(r=>({...r,sum:sum+=M.contacted(r),baseSum:baseSum+=M.num(r.base_added)}));
- $('#history').innerHTML=withTotal.reverse().map(r=>'<tr><td>'+M.dateLabel(r.record_date)+'</td><td>'+A.integer(r.base_added)+'</td><td>'+A.integer(r.baseSum)+'</td><td>'+A.integer(M.contacted(r))+'</td><td>'+A.integer(r.confirmed)+'</td><td>'+A.integer(r.sum)+'</td><td>'+A.esc(r.notes||'—')+'</td><td><button class="secondary" data-edit="'+r.id+'">Editar</button> '+(admin?'<button class="secondary" data-delete="'+r.id+'">Excluir</button>':'')+'</td></tr>').join('')||'<tr><td colspan="8" class="empty">Nenhum lançamento para esta base.</td></tr>';
+ let sum=0,baseSum=0;const withTotal=rows.map(r=>({...r,sum:sum+=M.contacted(r),baseSum:baseSum+=M.num(r.base_added),processed:M.processed(r)}));
+ $('#history').innerHTML=withTotal.reverse().map(r=>'<tr><td>'+M.dateLabel(r.record_date)+'</td><td>'+A.integer(r.base_added)+'</td><td>'+A.integer(r.baseSum)+'</td><td>'+A.integer(M.contacted(r))+'</td><td>'+A.integer(r.confirmed)+'</td><td>'+A.integer(r.not_confirmed)+'</td><td>'+A.integer(r.does_not_know)+'</td><td>'+A.integer(r.mailbox)+'</td><td>'+A.integer(r.number_not_exists)+'</td><td>'+A.integer(r.not_voting)+'</td><td>'+A.integer(r.base_added-r.processed)+'</td><td>'+A.esc(r.notes||'—')+'</td><td><button class="secondary" data-edit="'+r.id+'">Editar</button> '+(admin?'<button class="secondary" data-delete="'+r.id+'">Excluir</button>':'')+'</td></tr>').join('')||'<tr><td colspan="13" class="empty">Nenhum lançamento para esta base.</td></tr>';
 }
 function reset(){
  editing=null;M.entryFields.forEach(k=>form.elements[k].value=0);form.elements.notes.value='';form.elements.record_date.value=M.today();form.elements.record_date.max=M.today();

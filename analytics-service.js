@@ -36,7 +36,7 @@
         const items = daily.filter(d => String(d.record_id) === String(r.id) && (!from || d.record_date >= from) && (!to || d.record_date <= to));
         if (!items.length) return [];
         const result = {...r,total_base:daily.filter(d=>String(d.record_id)===String(r.id)&&(!to||d.record_date<=to)).reduce((n,d)=>n+Number(d.base_added),0)};
-        ['confirmed','not_confirmed','does_not_know','mailbox'].forEach(k => result[k] = items.reduce((n,d) => n + Number(d[k]),0));
+        ['confirmed','not_confirmed','does_not_know','mailbox','number_not_exists','not_voting'].forEach(k => result[k] = items.reduce((n,d) => n + Number(d[k]),0));
         return [result];
       });
     },

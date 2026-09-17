@@ -9,11 +9,21 @@ do $$ begin
  end if;
 end $$;
 alter table public.daily_records add column if not exists base_added integer;
+alter table public.sample_records add column if not exists number_not_exists integer;
+alter table public.sample_records add column if not exists not_voting integer;
+update public.sample_records set number_not_exists=0 where number_not_exists is null;
+update public.sample_records set not_voting=0 where not_voting is null;
+alter table public.sample_records alter column number_not_exists set default 0;
+alter table public.sample_records alter column number_not_exists set not null;
+alter table public.sample_records alter column not_voting set default 0;
+alter table public.sample_records alter column not_voting set not null;
+alter table public.daily_records add column if not exists number_not_exists integer;
+alter table public.daily_records add column if not exists not_voting integer;
 drop trigger if exists daily_validate_v2 on public.daily_records;
 drop trigger if exists daily_sync_v2 on public.daily_records;
 -- Bases sem lançamento recebem um registro inicial, sem apagar ou substituir outras datas.
-insert into public.daily_records(record_id,coordinator,leader,record_date,confirmed,not_confirmed,does_not_know,mailbox,base_added,notes)
-select s.id,s.coordinator,s.leader,s.record_date,s.confirmed,s.not_confirmed,s.does_not_know,s.mailbox,s.total_base,'Saldo inicial preservado na atualização da base diária.'
+insert into public.daily_records(record_id,coordinator,leader,record_date,confirmed,not_confirmed,does_not_know,mailbox,number_not_exists,not_voting,base_added,notes)
+select s.id,s.coordinator,s.leader,s.record_date,s.confirmed,s.not_confirmed,s.does_not_know,s.mailbox,s.number_not_exists,s.not_voting,s.total_base,'Saldo inicial preservado na atualização da base diária.'
 from public.sample_records s where not exists(select 1 from public.daily_records d where d.record_id=s.id);
 -- Só atribui o saldo inicial uma vez, na primeira execução.
 update public.daily_records d set base_added=s.total_base
@@ -21,17 +31,26 @@ from public.sample_records s where d.record_id=s.id and d.base_added is null
 and d.id=(select x.id from public.daily_records x where x.record_id=s.id order by x.record_date,x.id limit 1)
 and not exists(select 1 from public.daily_records x where x.record_id=s.id and x.base_added is not null);
 update public.daily_records set base_added=0 where base_added is null;
+update public.daily_records set number_not_exists=0 where number_not_exists is null;
+update public.daily_records set not_voting=0 where not_voting is null;
 alter table public.daily_records alter column base_added set default 0;
 alter table public.daily_records alter column base_added set not null;
+alter table public.daily_records alter column number_not_exists set default 0;
+alter table public.daily_records alter column number_not_exists set not null;
+alter table public.daily_records alter column not_voting set default 0;
+alter table public.daily_records alter column not_voting set not null;
 do $$ begin
  if not exists(select 1 from pg_constraint where conname='daily_base_added_nonnegative_v3' and conrelid='public.daily_records'::regclass) then
   alter table public.daily_records add constraint daily_base_added_nonnegative_v3 check(base_added>=0);
+ end if;
+ if not exists(select 1 from pg_constraint where conname='daily_extra_results_nonnegative_v4' and conrelid='public.daily_records'::regclass) then
+  alter table public.daily_records add constraint daily_extra_results_nonnegative_v4 check(number_not_exists>=0 and not_voting>=0);
  end if;
 end $$;
 
 create or replace function public.validate_daily_v2()
 returns trigger language plpgsql security definer set search_path=public as $$
-declare b public.sample_records; target bigint; remove_id bigint; minimum_balance numeric; base_sum numeric;
+declare b public.sample_records; target bigint; remove_id bigint; minimum_balance numeric; base_sum numeric; invalid_day date;
 begin
  target=case when TG_OP='DELETE' then old.record_id else new.record_id end;
  remove_id=case when TG_OP='INSERT' then null else old.id end;
@@ -43,19 +62,19 @@ begin
  if TG_OP<>'DELETE' then
   if TG_OP='UPDATE' and new.record_id<>old.record_id then raise exception 'Não é possível transferir o lançamento para outro líder.'; end if;
   if new.record_date is null or new.record_date>(now() at time zone 'America/Manaus')::date then raise exception 'Informe uma data válida, até hoje.'; end if;
-  if new.base_added is null or new.base_added<0 or new.confirmed<0 or new.not_confirmed<0 or new.does_not_know<0 or new.mailbox<0 then raise exception 'Use inteiros não negativos.'; end if;
+  if new.base_added is null or new.base_added<0 or new.confirmed<0 or new.not_confirmed<0 or new.does_not_know<0 or new.mailbox<0 or new.number_not_exists<0 or new.not_voting<0 then raise exception 'Use inteiros não negativos.'; end if;
  end if;
  with entries as (
-  select record_date,base_added::bigint base,confirmed::bigint+not_confirmed+does_not_know+mailbox contacts
+  select record_date,base_added::bigint base,confirmed::bigint+not_confirmed+does_not_know+mailbox+number_not_exists+not_voting contacts
   from public.daily_records where record_id=target and (remove_id is null or id<>remove_id)
   union all
-  select new.record_date,new.base_added::bigint,new.confirmed::bigint+new.not_confirmed+new.does_not_know+new.mailbox where TG_OP<>'DELETE'
+  select new.record_date,new.base_added::bigint,new.confirmed::bigint+new.not_confirmed+new.does_not_know+new.mailbox+new.number_not_exists+new.not_voting where TG_OP<>'DELETE'
  ), days as (
-  select record_date,sum(base) base,sum(base-contacts) delta from entries group by record_date
+  select record_date,sum(base) base,sum(contacts) contacts,sum(base-contacts) delta from entries group by record_date
  ), balances as (
-  select sum(delta) over(order by record_date) balance,base from days
- ) select min(balance),sum(base) into minimum_balance,base_sum from balances;
- if coalesce(minimum_balance,0)<0 then raise exception 'Os contatos ultrapassam a base acumulada em uma das datas. Confira a base adicionada e os lançamentos anteriores.'; end if;
+  select sum(delta) over(order by record_date) balance,base,contacts,record_date from days
+ ) select min(balance),sum(base),min(record_date) filter(where contacts>base) into minimum_balance,base_sum,invalid_day from balances;
+ if invalid_day is not null then raise exception 'A soma dos resultados de % ultrapassa a base cadastrada no mesmo dia.', to_char(invalid_day,'DD/MM/YYYY'); end if;
  if coalesce(base_sum,0)>2147483647 then raise exception 'A base acumulada ultrapassa o limite suportado.'; end if;
  if TG_OP='DELETE' then return old; end if;
  new.coordinator=b.coordinator;new.leader=b.leader;new.updated_at=now();
@@ -67,9 +86,9 @@ declare target bigint;
 begin
  target=case when TG_OP='DELETE' then old.record_id else new.record_id end;
  perform 1 from public.sample_records where id=target for update;
- update public.sample_records s set total_base=t.b,confirmed=t.c,not_confirmed=t.n,does_not_know=t.d,mailbox=t.m,updated_at=now()
+ update public.sample_records s set total_base=t.b,confirmed=t.c,not_confirmed=t.n,does_not_know=t.d,mailbox=t.m,number_not_exists=t.x,not_voting=t.v,updated_at=now()
  from (select coalesce(sum(base_added),0)::integer b,coalesce(sum(confirmed),0)::integer c,coalesce(sum(not_confirmed),0)::integer n,
- coalesce(sum(does_not_know),0)::integer d,coalesce(sum(mailbox),0)::integer m from public.daily_records where record_id=target) t
+ coalesce(sum(does_not_know),0)::integer d,coalesce(sum(mailbox),0)::integer m,coalesce(sum(number_not_exists),0)::integer x,coalesce(sum(not_voting),0)::integer v from public.daily_records where record_id=target) t
  where s.id=target;
  return null;
 end $$;
@@ -79,7 +98,7 @@ create trigger daily_sync_v2 after insert or update or delete on public.daily_re
 -- O mesmo coordenador/líder recebe um novo lançamento, não outra base duplicada.
 create or replace function public.save_sampling_base_v2(p_id bigint,p_values jsonb)
 returns jsonb language plpgsql security definer set search_path=public as $$
-declare b public.sample_records; target bigint; matches integer; day date; added integer; c integer; n integer; d integer; m integer;
+declare b public.sample_records; target bigint; matches integer; day date; added integer; c integer; n integer; d integer; m integer; x integer; v integer;
  coord text; leader_name text;
 begin
  if auth.uid() is null then raise exception 'Entre na sua conta para salvar.'; end if;
@@ -95,13 +114,13 @@ begin
   day=(p_values->>'record_date')::date;
   if day is null then raise exception 'Informe a data do lançamento.'; end if;
   c=coalesce((p_values->>'confirmed')::integer,0);n=coalesce((p_values->>'not_confirmed')::integer,0);
-  d=coalesce((p_values->>'does_not_know')::integer,0);m=coalesce((p_values->>'mailbox')::integer,0);
+  d=coalesce((p_values->>'does_not_know')::integer,0);m=coalesce((p_values->>'mailbox')::integer,0);x=coalesce((p_values->>'number_not_exists')::integer,0);v=coalesce((p_values->>'not_voting')::integer,0);
   if target is null then
    insert into public.sample_records(coordinator,leader,total_base,record_date)
    values(coord,leader_name,0,day) returning id into target;
   end if;
-  insert into public.daily_records(record_id,record_date,base_added,confirmed,not_confirmed,does_not_know,mailbox)
-  values(target,day,added,c,n,d,m);
+  insert into public.daily_records(record_id,record_date,base_added,confirmed,not_confirmed,does_not_know,mailbox,number_not_exists,not_voting)
+  values(target,day,added,c,n,d,m,x,v);
  else
   target=p_id;
   select * into b from public.sample_records where id=target for update;

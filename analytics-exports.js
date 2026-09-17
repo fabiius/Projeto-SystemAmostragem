@@ -3,7 +3,7 @@
   const M = window.SamplingMetrics;
   const rows = records => records.map(record => {
     const total = M.summarize([record]);
-    return { 'Coordenador':record.coordinator || '', 'Líder':record.leader || '', 'Total Base':total.total_base, 'Contatados':total.contacted, 'Confirmados':total.confirmed, 'Não confirmados':total.not_confirmed, 'Não conhece':total.does_not_know, 'Cx. postal':total.mailbox, 'Cobertura':M.percent(total.coverage), '% Confirmação':M.percent(total.confirmation), 'Pendentes':total.pending };
+    return { 'Coordenador':record.coordinator || '', 'Líder':record.leader || '', 'Cadastrados no Sistema':total.total_base, 'Ligações atendidas':total.contacted, 'Confirmados':total.confirmed, 'Não confirmados':total.not_confirmed, 'Não conhece':total.does_not_know, 'Caixa postal':total.mailbox, 'Número Não Existe':total.number_not_exists, 'Não vai votar':total.not_voting, 'Cobertura':M.percent(total.coverage), '% Confirmação':M.percent(total.confirmation), 'Pendentes':total.pending };
   });
   const download = (content, name, type) => {
     const url = URL.createObjectURL(new Blob([content], { type }));
@@ -17,7 +17,7 @@
     if (kind === 'xml') {
       const xml = filtered.map(record => {
         const total = M.summarize([record]);
-        const values = { id:record.id, coordenador:record.coordinator, lider:record.leader, total:total.total_base, contatados:total.contacted, confirmado:total.confirmed, nao_confirmados:total.not_confirmed, nao_conhece:total.does_not_know, caixa_postal:total.mailbox, cobertura:total.coverage, taxa_confirmacao:total.confirmation, pendentes:total.pending };
+        const values = { id:record.id, coordenador:record.coordinator, lider:record.leader, cadastrados_no_sistema:total.total_base, ligacoes_atendidas:total.contacted, confirmado:total.confirmed, nao_confirmados:total.not_confirmed, nao_conhece:total.does_not_know, caixa_postal:total.mailbox, numero_nao_existe:total.number_not_exists, nao_vai_votar:total.not_voting, cobertura:total.coverage, taxa_confirmacao:total.confirmation, pendentes:total.pending };
         return '<item>' + Object.entries(values).map(([key, value]) => `<${key}>${xmlEscape(value)}</${key}>`).join('') + '</item>';
       }).join('\n');
       return download(`<?xml version="1.0" encoding="UTF-8"?>\n<relatorio_qualidade>\n${xml}\n</relatorio_qualidade>`, `relatorio_qualidade_${stamp}.xml`, 'application/xml;charset=utf-8');
@@ -26,11 +26,11 @@
     const workbook = XLSX.utils.book_new();
     if (kind === 'daily') {
       const total = M.summarize(all);
-      const summary = { 'Data do relatório':new Date().toLocaleDateString('pt-BR'), 'Escopo':'Retrato de toda a base no momento da exportação', 'Total Base':total.total_base, 'Contatados':total.contacted, 'Cobertura':M.percent(total.coverage), 'Confirmados':total.confirmed, 'Taxa de confirmação':M.percent(total.confirmation), 'Pendentes':total.pending };
+      const summary = { 'Data do relatório':new Date().toLocaleDateString('pt-BR'), 'Escopo':'Retrato de toda a base no momento da exportação', 'Cadastrados no Sistema':total.total_base, 'Ligações atendidas':total.contacted, 'Cobertura':M.percent(total.coverage), 'Confirmados':total.confirmed, 'Taxa de confirmação':M.percent(total.confirmation), 'Pendentes':total.pending };
       XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(Object.entries(summary).map(([metric, value]) => ({ 'Métrica':metric, 'Valor':value }))), 'Resumo Executivo');
     }
-    const sheet = XLSX.utils.json_to_sheet(rows(kind === 'daily' ? all : filtered), { header:['Coordenador','Líder','Total Base','Contatados','Confirmados','Não confirmados','Não conhece','Cx. postal','Cobertura','% Confirmação','Pendentes'] });
-    sheet['!cols'] = Array.from({ length:11 }, () => ({ wch:20 }));
+    const sheet = XLSX.utils.json_to_sheet(rows(kind === 'daily' ? all : filtered), { header:['Coordenador','Líder','Cadastrados no Sistema','Ligações atendidas','Confirmados','Não confirmados','Não conhece','Caixa postal','Número Não Existe','Não vai votar','Cobertura','% Confirmação','Pendentes'] });
+    sheet['!cols'] = Array.from({ length:13 }, () => ({ wch:20 }));
     XLSX.utils.book_append_sheet(workbook, sheet, 'Matriz Qualidade');
     XLSX.writeFile(workbook, `${kind === 'daily' ? 'resumo_diario_qualidade' : 'qualidade_matriz'}_${stamp}.xlsx`);
   }

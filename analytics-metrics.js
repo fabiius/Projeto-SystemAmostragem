@@ -1,13 +1,13 @@
 (function (root) {
   'use strict';
-  const numericFields = ['total_base', 'confirmed', 'not_confirmed', 'does_not_know', 'mailbox'];
+  const numericFields = ['total_base', 'confirmed', 'not_confirmed', 'does_not_know', 'mailbox', 'number_not_exists', 'not_voting'];
   const number = value => Number(value) || 0;
   const calculatePercentage = (value, total) => total > 0 ? value / total * 100 : 0;
   const calculateCoverage = (totalBase, contacted) => calculatePercentage(contacted, totalBase);
   const calculateConfirmationRate = (contacted, confirmed) => calculatePercentage(confirmed, contacted);
   const calculatePending = (totalBase, contacted) => totalBase - contacted;
   const contacted = row => ['confirmed', 'not_confirmed', 'does_not_know'].reduce((sum, field) => sum + number(row[field]), 0);
-  const processed = row => contacted(row) + number(row.mailbox);
+  const processed = row => contacted(row) + number(row.mailbox) + number(row.number_not_exists) + number(row.not_voting);
   const summarize = rows => {
     const total = Object.fromEntries(numericFields.map(field => [field, 0]));
     rows.forEach(row => numericFields.forEach(field => { total[field] += number(row[field]); }));
